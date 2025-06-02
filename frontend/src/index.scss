@@ -1,0 +1,55 @@
+@import './css/variables.scss';
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: $text-black;
+  background-color: $site-background;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 600;
+  color: $text-secondary;
+  text-decoration: inherit;
+  border-radius: 4px;
+  padding: 6px 8px;
+  border: 1px solid #fff;
+}
+
+a:hover {
+  color: $text-primary;
+}
+
+html,
+body {
+  margin: 0;
+  /* display: flex;
+  place-items: center; */
+  min-width: 320px;
+  height: 100%;
+  font-family: "Inter", sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+}
+
+/* --verdigris: #02ADB5ff;  - primary
+--azure-web: #DFF2F9ff; - site BG 
+--azure-web-2: #E0F2F9ff; - secondary
+--verdigris-2: #1DB3BBff;
+--cadet-gray: #9BA9B0ff; - text secondary
+*/

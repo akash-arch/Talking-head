@@ -1,0 +1,49 @@
+@import "../../css/variables.scss";
+
+.header-container {
+  width: 100%;
+  z-index: 100;
+  position: sticky;
+  top: 0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background: #fff;
+}
+
+.inner-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-right: 40px;
+
+  ul {
+    list-style: none;
+    display: flex;
+    gap: 10px;
+    font-weight: 700;
+
+    li {
+      cursor: pointer;
+    }
+
+    li:hover {
+      border-bottom: 2px solid $primary-color;
+    }
+
+    .selected-link {
+      border-bottom: 2px solid $primary-color;
+      a {
+        color: $primary-color;
+      }
+    }
+  }
+}
+
+.logo-container {
+  background: #fff;
+  cursor: pointer;
+}
+
+.app-logo {
+  width: 100px;
+  height: 100%;
+}
