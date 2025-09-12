@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import TextField from "@mui/material/TextField";
 import { styled } from "@mui/material/styles";
 import Button from "@mui/material/Button";
@@ -9,15 +9,19 @@ import { useFaceDetection } from "../../hooks/useFaceDetection";
 import AudioPlayer from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
 import VoiceSelector from "../../components/VoiceSelector/VoiceSelector";
+import Loader from "../../components/loader/Loader";
+import { pollVideoStatus } from "../../util/getVideo.js";
 
 interface ErrorState {
   inputText: boolean;
   voice: boolean;
+  video: boolean;
 }
 
 const initialErrorState = {
   inputText: false,
   voice: false,
+  video: false,
 };
 
 const VisuallyHiddenInput = styled("input")({
@@ -38,15 +42,22 @@ const GenerateVideo = () => {
 
   const [inputText, setInputText] = useState<string>("");
   const [voiceId, setVoiceId] = useState<string>("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [error, setError] = useState<ErrorState>(initialErrorState);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const videoRef = useRef(null);
 
   const showImageError = hasFace === false && imagePreview;
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && file.type.startsWith("image/")) {
+      setImageFile(file);
       const previewUrl = URL.createObjectURL(file);
       setImagePreview(previewUrl);
       if (previewUrl) detectFace(previewUrl);
@@ -58,38 +69,100 @@ const GenerateVideo = () => {
     resetHasFace();
   };
 
-  const handleFormSubmit = async () => {
-    if (!inputText) {
-      return setError({
-        ...error,
-        inputText: true,
+  const generateAudio = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/tts`, {
+        method: "POST",
+        body: JSON.stringify({
+          text: inputText,
+          voiceId,
+          imageUrl: imagePreview,
+        }),
+        headers: { "Content-Type": "application/json" },
       });
-    } else if (!voiceId) {
-      return setError({
-        inputText:false,
-        voice: true,
-      });
-    } else {
-      setError(initialErrorState);
-      try {
-        const res = await fetch(`${apiUrl}/tts`, {
-          method: "POST",
-          body: JSON.stringify({ text: inputText }),
-          headers: { "Content-Type": "application/json" },
-        });
 
+      if (res.ok) {
         const blob = await res?.blob();
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
-      } catch (error) {
-        console.error(error);
+
+        // create File object for backend
+        const audioFile = new File([blob], "speech.mp3", {
+          type: "audio/mpeg",
+        });
+        setAudioFile(audioFile);
+      } else {
+        setAudioUrl(null);
+        setAudioFile(null);
       }
+    } catch (error) {
+      console.error(error);
     }
   };
-  
+
+  useEffect(() => {
+    if (inputText && voiceId) {
+      generateAudio();
+    }
+  }, [inputText, voiceId]);
+
+  useEffect(() => {
+    if (videoUrl && videoRef.current) {
+      setTimeout(() => {
+        videoRef.current.scrollIntoView({ behavior: "smooth" });
+      }, 300);
+    }
+  }, [videoUrl]);
+
+  const handleFormSubmit = async () => {
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", imageFile);
+      formData.append("audio", audioFile);
+      const res = await fetch(`${apiUrl}/generate-video`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError({
+          ...error,
+          video: true,
+        });
+        setLoading(false);
+        return;
+      }
+
+      await pollVideoStatus(data.data.id, {
+        onSuccess: (data) => {
+          setVideoUrl(data.result_url);
+          if (data.status === "done") {
+            setTimeout(() => {
+              setLoading(false);
+            }, 300);
+          }
+        },
+        onError: (err) => {
+          console.error("Video generation failed:", err);
+          setLoading(false);
+        },
+      });
+    } catch (err) {
+      console.error(err);
+      setError({
+        ...error,
+        video: true,
+      });
+      setLoading(false);
+    }
+  };
 
   return (
     <>
+      {loading && <Loader />}
       <h2 className="top-most-heading">
         Talking Photo Free - Bring Photos to Life
       </h2>
@@ -118,7 +191,10 @@ const GenerateVideo = () => {
             />
             <VoiceSelector
               showError={error.voice}
-              onSelect={(val) => setVoiceId(val)}
+              onSelect={(val) => {
+                setVoiceId(val);
+                setAudioUrl(null);
+              }}
             />
           </div>
           <div className="generate-video-btn-wrapper">
@@ -137,6 +213,9 @@ const GenerateVideo = () => {
               color="primary"
               onClick={handleFormSubmit}
               className="generate-video-btn"
+              disabled={
+                !voiceId || !inputText || !imagePreview || !!showImageError
+              }
             >
               Generate Video
             </Button>
@@ -189,6 +268,17 @@ const GenerateVideo = () => {
           )}
         </div>
       </div>
+
+      {videoUrl && (
+        <div className="generated-video-wrapper" ref={videoRef}>
+          <video
+            src={videoUrl}
+            controls
+            playsInline
+            style={{ maxWidth: "80%" }}
+          />
+        </div>
+      )}
     </>
   );
 };

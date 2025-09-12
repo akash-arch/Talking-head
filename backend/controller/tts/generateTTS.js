@@ -9,30 +9,31 @@ const client = new ElevenLabsClient({
 });
 
 const generateAudio = async (req, res) => {
-
   if (!req.body) {
     return res.status(400).json({
-      message: "Bad Request: please provide text in body",
+      message: "Bad Request: please provide body",
     });
   }
 
-  const { text } = req?.body;
+  const { text, voiceId } = req?.body;
 
-  if (!text) {
+  if (!text || !voiceId) {
     return res.status(400).json({
-      message: "Bad Request: please provide text in body",
+      message: "Bad Request: please provide text and voice in body",
     });
   }
 
   try {
-    const voiceId = "JBFqnCBsd6RMkjVDRZzb"; // Rachel's voice
     const buffer = await client.textToSpeech.convert(voiceId, {
       text,
       model_id: "eleven_multilingual_v2",
       output_format: "mp3_44100_128",
+      voice_settings: {
+        stability: 0.4,
+      },
     });
 
-    const nodeStream = webStreamToNodeStream(buffer)
+    const nodeStream = webStreamToNodeStream(buffer);
     res.setHeader("Content-Type", "audio/mpeg");
     nodeStream.pipe(res);
   } catch (error) {

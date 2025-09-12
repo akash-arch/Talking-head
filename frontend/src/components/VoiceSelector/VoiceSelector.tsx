@@ -7,10 +7,15 @@ import {
 } from "@mui/material";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
 import "./VoiceSelector.scss";
+import boySrc from "../../../public/boy.png";
+import girlSrc from "../../../public/girl.png";
 
 interface Voice {
   voice_id: string;
   name: string;
+  labels: {
+    gender: string;
+  };
 }
 
 interface VoiceSelectorProps {
@@ -28,9 +33,13 @@ const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
   useEffect(() => {
     async function getVoicesList() {
-      const res = await fetch(`${apiUrl}/get-voices`);
-      const data = await res.json();
-      if (data?.voices?.length) setVoices(data?.voices);
+      try {
+        const res = await fetch(`${apiUrl}/get-voices`);
+        const data = await res.json();
+        if (data?.voices?.length) setVoices(data?.voices);
+      } catch (error) {
+        console.error(error);
+      }
     }
 
     getVoicesList();
@@ -47,21 +56,30 @@ const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       error={showError}
       fullWidth
     >
-      <InputLabel id="demo-simple-select-label">Select Voice*</InputLabel>
-      <Select
-        labelId="voice-select-label"
-        label="Select Voice"
-        value={selectedVoice}
-        onChange={handleChange}
-        fullWidth
-      >
-        {voices?.map((voice) => (
-          <MenuItem key={voice.voice_id} value={voice.voice_id}>
-            {voice.name}
-          </MenuItem>
-        ))}
-      </Select>
-      {showError && <FormHelperText>Please select a voice</FormHelperText>}
+      {Boolean(voices?.length) && (
+        <>
+          <InputLabel id="demo-simple-select-label">Select Voice*</InputLabel>
+          <Select
+            labelId="voice-select-label"
+            label="Select Voice"
+            value={selectedVoice}
+            onChange={handleChange}
+            fullWidth
+          >
+            {voices?.map((voice) => (
+              <MenuItem key={voice.voice_id} value={voice.voice_id}>
+                <img
+                  src={voice?.labels?.gender === "female" ? girlSrc : boySrc}
+                  className="avatar-img"
+                  alt="gender avatar logo"
+                />
+                {voice.name}
+              </MenuItem>
+            ))}
+          </Select>
+          {showError && <FormHelperText>Please select a voice</FormHelperText>}
+        </>
+      )}
     </FormControl>
   );
 };
